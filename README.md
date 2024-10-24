@@ -6,7 +6,7 @@
 
 - Parses a markdown file for tasks.
 - Separates completed and uncompleted tasks.
-- Moves completed tasks to a specific date section in the file.
+- Moves completed and aborted tasks to a specific date section in the file.
 - Configurable to move tasks to either the current day or the previous day based on the current time.
 
 ## Usage
@@ -32,6 +32,7 @@ Tasks in the markdown file should follow this format:
 ```
 - [ ] Task description
 - [x] Completed task description
+~~- [ ] Aborted task description~~
 ```
 
 ## Installation
@@ -64,7 +65,7 @@ Tasks in the markdown file should follow this format:
 
 1. The tool reads the specified markdown file.
 2. It parses tasks, separating them into completed and uncompleted tasks.
-3. Completed tasks are moved to a section labeled with the current date or the previous day if run before a specific time (9 AM).
+3. Completed and aborted tasks are moved to a section labeled with the current date or the previous day if run before a specific time (9 AM).
 4. The updated content is written back to the file.
 
 ## Example File
@@ -72,13 +73,11 @@ Tasks in the markdown file should follow this format:
 ### Before
 
 ```
-# ToDo List
-
 - [ ] Task 1
-- [ ] Task 2
+~~- [ ] Task 2~~
 - [x] Task 3
 - [x] Task 4
-
+---
 # Monday, 1 January
 - [x] Task 0
 ```
@@ -86,12 +85,10 @@ Tasks in the markdown file should follow this format:
 ### After
 
 ```
-# ToDo List
-
 - [ ] Task 1
-- [ ] Task 2
-
+---
 # Tuesday, 2 January
+~~- [ ] Task 2~~
 - [x] Task 3
 - [x] Task 4
 

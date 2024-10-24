@@ -11,6 +11,7 @@ import (
 type Task struct {
 	Description string
 	Completed   bool
+	Aborted     bool
 }
 
 type Day struct {
@@ -27,6 +28,8 @@ func main() {
 	}
 	if os.Args[1] == "-h" || os.Args[1] == "--help" {
 		fmt.Println("Usage:\n\ttodoer [options] [file]")
+		fmt.Println()
+		fmt.Println("Example:\ntodoer ~/todo.md")
 		return
 	}
 
@@ -89,8 +92,7 @@ func main() {
 	}
 
 	// Format the output
-	output := formatTasks(uncompletedTasks) + formatDays(days)
-	// fmt.Println(output)
+	output := formatTasks(uncompletedTasks) + "---\n" + formatDays(days)
 
 	err = writeToFile(filePath, output)
 	if err != nil {
@@ -101,17 +103,28 @@ func main() {
 	fmt.Printf("File %s updated successfully\n", filePath)
 }
 
+func isTask(line string) bool {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "- ") {
+		return true
+	} else if strings.HasPrefix(line, "~~") {
+		return true
+	}
+
+	return false
+}
+
 func getTasks(file *os.File) ([]Task, error) {
 	var tasks []Task
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "#") || line == "" {
+		if !isTask(line) {
 			break
 		}
 		task, err := parseTask(line)
 		if err != nil {
-			// fmt.Printf("error parsing task: %v\n", err)
+			fmt.Printf("error parsing task: %v\n", err)
 			return nil, err
 		}
 		tasks = append(tasks, task)
@@ -127,7 +140,7 @@ func splitTasks(tasks []Task) ([]Task, []Task, error) {
 
 	var completedTasks, uncompletedTasks []Task
 	for _, task := range tasks {
-		if task.Completed {
+		if task.Completed || task.Aborted {
 			completedTasks = append(completedTasks, task)
 		} else {
 			uncompletedTasks = append(uncompletedTasks, task)
@@ -138,6 +151,16 @@ func splitTasks(tasks []Task) ([]Task, []Task, error) {
 }
 
 func parseTask(s string) (Task, error) {
+
+	aborted := false
+	// Remove aborted task notation
+	if strings.HasPrefix(s, "~~- [") {
+		s = strings.TrimPrefix(s, "~~")
+		if strings.HasSuffix(s, "~~") {
+			s = strings.TrimSuffix(s, "~~")
+		}
+		aborted = true
+	}
 
 	// Check if string has markdown task format
 	if !strings.HasPrefix(s, "- [") {
@@ -158,6 +181,7 @@ func parseTask(s string) (Task, error) {
 	return Task{
 		Description: strings.TrimSpace(s[5:]),
 		Completed:   completed,
+		Aborted:     aborted,
 	}, nil
 }
 
@@ -203,8 +227,11 @@ func extractTasks(lines []string) ([]Task, error) {
 		if line == "" {
 			continue
 		}
-		if strings.HasPrefix(line, "#") {
+		if strings.HasPrefix(line, "#") || strings.HasPrefix(line, "---") {
 			break
+		}
+		if !isTask(line) {
+			continue
 		}
 		task, err := parseTask(line)
 		if err != nil {
@@ -223,7 +250,11 @@ func formatTasks(tasks []Task) string {
 		if task.Completed {
 			completedMark = 'x'
 		}
-		sb.WriteString(fmt.Sprintf("- [%c] %s\n", completedMark, task.Description))
+		abortedMark := ""
+		if task.Aborted {
+			abortedMark = "~~"
+		}
+		sb.WriteString(fmt.Sprintf("%s- [%c] %s%s\n", abortedMark, completedMark, task.Description, abortedMark))
 	}
 	return sb.String()
 }
